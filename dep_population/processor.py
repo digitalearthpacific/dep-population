@@ -5,9 +5,10 @@ import xarray as xr
 
 
 def population_density(population_count: xr.DataArray):
-    area = area_raster(population_count)
-    breakpoint()
-    return population_count / area
+    area_sqm = area_raster(population_count)
+    sqkm_per_sqm = 1 / (1000 * 1000)
+    area_sqkm = area_sqm * sqkm_per_sqm
+    return population_count / area_sqkm
 
 
 def area_raster(da: xr.DataArray) -> xr.DataArray:

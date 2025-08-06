@@ -9,6 +9,7 @@ from dep_tools.writers import AwsDsCogWriter, AwsStacWriter
 from dep_tools.namers import S3ItemPath
 import pandas as pd
 import typer
+import xarray as xr
 
 from loader import country_codes_for_area, load_population_counts
 from processor import population_density
@@ -50,14 +51,16 @@ def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
     stac_writer = AwsStacWriter(ITEMPATH)
 
     area = population_grid().loc[tile_id]
+    pop_density = []
     for code in country_codes_for_area(area):
         pop_count = load_population_counts(code)
-        pop_density = population_density(pop_count).to_dataset(name="people_per_sqm")
+        pop_density.append(population_density(pop_count))
 
-        writer.write(pop_density, tile_id)
+    output = xr.combine_by_coords(pop_density).to_dataset(name="pop_per_sqkm")
+    writer.write(output, tile_id)
 
-        stac_item = stac_creator.process(pop_density, tile_id)
-        stac_writer.write(stac_item, tile_id)
+    stac_item = stac_creator.process(output, tile_id)
+    stac_writer.write(stac_item, tile_id)
 
 
 @app.command()
