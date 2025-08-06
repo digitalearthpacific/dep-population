@@ -16,7 +16,7 @@ ADD . /tmp/dep-population
 WORKDIR /tmp
 RUN pip install --no-cache-dir --upgrade pip \
 && pip install uv \
-&& uv pip install ./dep-population
+&& uv pip install --system ./dep-population
 
 ADD . /code
 WORKDIR /code
