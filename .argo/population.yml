@@ -1,0 +1,70 @@
+kind: Workflow
+metadata:
+  generateName: dep-pops-
+  namespace: argo
+spec:
+  entrypoint: loop-map-ocm
+  serviceAccountName: public-bucket-writer
+  podGC:
+    strategy: OnPodSuccess
+    deleteDelayDuration: 600s
+  parallelism: 5
+  activeDeadlineSeconds: 36000 
+  tolerations:
+  - key: digitalearthpacific.org/node-purpose
+    operator: Equal
+    value: argo
+    effect: NoSchedule
+  arguments:
+    parameters:
+    - name: image-tag
+      value: "ec5bed4"
+  templates:
+  - name: loop-map-ocm
+    retryStrategy:
+      limit: "2"
+      retryPolicy: "Always"
+    dag:
+      tasks:
+        - name: generate-ids
+          template: generate
+        - name: process-id
+          depends: generate-ids.Succeeded
+          template: process-item
+          arguments:
+            parameters:
+            - name: id
+              value: "{{item.s2_id}}"
+          withParam: "{{ tasks.generate-ids.outputs.result }}"
+  - name: generate
+    container:
+      image: "ghcr.io/digitalearthpacific/dep-population:{{ workflow.parameters.image-tag }}"
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests: 
+          memory: 100Mi
+          cpu: 1.0
+      command: [ python ]
+      args:
+        - dep_population/main.py
+        - print-ids
+  - name: process-item
+    inputs:
+      parameters:
+      - name: id
+    container:
+      image: "ghcr.io/digitalearthpacific/dep-population:{{ workflow.parameters.image-tag }}"
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests: 
+          memory: 4Gi
+          cpu: 2.0
+        limits:
+          memory: 4Gi
+          cpu: 2.0
+      command: [ python ]
+      args:
+        - dep_population/main.py
+        - run-task
+        - --tile-id
+        - "{{ inputs.parameters.id }}"
