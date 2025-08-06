@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
 
 ADD . /tmp/dep-population
 WORKDIR /tmp
-RUN pip install --no-cache-dir --upgrade pip && pip install ./dep-population
+RUN pip install --no-cache-dir --upgrade pip \
+&& pip install uv \
+&& uv pip install ./dep-population
 
 ADD . /code
 WORKDIR /code
