@@ -1,0 +1,24 @@
+[project]
+name = "dep-population"
+version = "0.1.0"
+description = "Digital Earth Pacific population grids"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dask[complete]>=2025.7.0",
+    "dep-tools",
+    "gdal==3.8.4",
+    "rasterio>=1.4.3",
+    "requests>=2.32.4",
+    "rioxarray>=0.19.0",
+    "typer>=0.16.0",
+    "xarray>=2025.6.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+]
+
+[tool.uv.sources]
+dep-tools = { git = "https://github.com/digitalearthpacific/dep-tools.git" }
