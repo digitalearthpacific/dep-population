@@ -2,6 +2,7 @@ from dep_tools.grids import gadm
 from dep_tools.loaders import Loader
 from dep_tools.searchers import Searcher
 from odc.geo.geobox import GeoBox
+import odc.geo.xr
 import requests
 from rasterio.io import MemoryFile, ZipMemoryFile
 import rioxarray as rx
@@ -12,7 +13,7 @@ def country_codes_for_area(area: GeoBox) -> list[str]:
     return gadm().to_crs(area.crs).clip(area.boundingbox.bbox).GID_0.unique().tolist()
 
 
-def load_population_counts(country_code: str) -> xr.DataArray:
+def load_population_counts(country_code: str, area: GeoBox) -> xr.DataArray | None:
     worldpop_codes = ["ASM", "GUM", "MNP", "NCL", "PCN", "PNG", "PYF", "TKL", "TON"]
 
     direct_downloads = dict(
@@ -36,14 +37,30 @@ def load_population_counts(country_code: str) -> xr.DataArray:
         base = "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2024B/2025/"
         suffix = "_pop_2025_CN_100m_R2024B_v1.tif"
         url = f"{base}/{country_code.upper()}/v1/100m/constrained/{country_code.lower()}{suffix}"
-        return _open_via_memoryfile(url, country_code)
+        return _open_via_memoryfile(url, country_code, area)
     elif country_code.upper() in direct_downloads.keys():
         return _open_via_memoryfile(
-            direct_downloads[country_code.upper()], country_code
+            direct_downloads[country_code.upper()], country_code, area
         )
 
 
-def _open_via_memoryfile(url: str, country_code: str) -> xr.DataArray | xr.Dataset:
+def _open_and_crop(src, area: GeoBox):
+    da = rx.open_rasterio(
+        src, mask_and_scale=True, chunks=dict(x=4096, y=4096)
+    ).squeeze(drop=True)
+
+    # sometimes the raster doesn't have values in this area, i.e.
+    # uninhabited island, etc
+    if not da.odc.geobox.footprint(4326).intersects(area.footprint(4326)):
+        return None
+
+    return odc.geo.xr.xr_reproject(da, area, dst_nodata=float("nan")).compute()
+    # return da.odc.crop(area.footprint(da.odc.crs)).compute().odc.xr_reproject(area)
+
+
+def _open_via_memoryfile(
+    url: str, country_code: str, area: GeoBox
+) -> xr.DataArray | xr.Dataset:
     resp = requests.get(url)
     resp.raise_for_status()
     if url.endswith(".zip"):
@@ -53,12 +70,6 @@ def _open_via_memoryfile(url: str, country_code: str) -> xr.DataArray | xr.Datas
             else:
                 tif_file = f"{country_code.upper()}_t_pop_2025.tif"
             with zipmemfile.open(tif_file) as tifmemfile:
-                return (
-                    rx.open_rasterio(tifmemfile, mask_and_scale=True)
-                    .squeeze(drop=True)
-                    .compute()
-                )
+                return _open_and_crop(tifmemfile, area)
     with MemoryFile(resp.content) as memfile:
-        return (
-            rx.open_rasterio(memfile, mask_and_scale=True).squeeze(drop=True).compute()
-        )
+        return _open_and_crop(memfile, area)

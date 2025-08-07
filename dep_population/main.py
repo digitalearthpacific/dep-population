@@ -23,7 +23,7 @@ DATETIME = "2023_2025"
 
 ITEMPATH = S3ItemPath(
     bucket=BUCKET,
-    sensor="combination",
+    sensor="pdhhdx",
     dataset_id=DATASET_ID,
     version=VERSION,
     time=DATETIME,
@@ -41,6 +41,7 @@ def population_grid():
 
 
 def parse_tile_id(tile_str) -> tuple[int, ...]:
+    # "[12, 345]" -> [12,345]
     return tuple(int(value) for value in tile_str[1:-1].split(","))
 
 
@@ -53,10 +54,17 @@ def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
     area = population_grid().loc[tile_id]
     pop_density = []
     for code in country_codes_for_area(area):
-        pop_count = load_population_counts(code)
-        pop_density.append(population_density(pop_count))
+        pop_count = load_population_counts(code, area)
+        if pop_count is not None:  # no data for this area
+            pop_density.append(population_density(pop_count))
 
-    output = xr.combine_by_coords(pop_density).to_dataset(name="pop_per_sqkm")
+    if len(pop_density) > 1:
+        output = xr.concat(pop_density, dim="z").max(dim="z")
+    else:
+        output = pop_density[0]
+
+    output = output.to_dataset(name="pop_per_sqkm")
+
     writer.write(output, tile_id)
 
     stac_item = stac_creator.process(output, tile_id)

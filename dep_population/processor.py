@@ -15,7 +15,7 @@ def area_raster(da: xr.DataArray) -> xr.DataArray:
     if CRS.from_user_input(da.odc.crs).is_geographic:
         return area_raster_4326(da)
     else:
-        return xr.full_like(da, np.prod(da.rio.resolution()).astype("float32"))
+        return xr.full_like(da, abs(np.prod(da.rio.resolution())).astype("float32"))
 
 
 def area_raster_4326(da: xr.DataArray) -> xr.DataArray:
