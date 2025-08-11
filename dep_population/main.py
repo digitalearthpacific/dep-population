@@ -7,6 +7,7 @@ from dep_tools.grids import grid, gadm
 from dep_tools.stac_utils import StacCreator
 from dep_tools.writers import AwsDsCogWriter, AwsStacWriter
 from dep_tools.namers import S3ItemPath
+from odc.geo.xr import xr_reproject
 import pandas as pd
 import typer
 import xarray as xr
@@ -18,7 +19,7 @@ app = typer.Typer()
 
 BUCKET = "dep-public-staging"
 DATASET_ID = "population"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 DATETIME = "2023_2025"
 
 ITEMPATH = S3ItemPath(
@@ -56,7 +57,10 @@ def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
     for code in country_codes_for_area(area):
         pop_count = load_population_counts(code, area)
         if pop_count is not None:  # no data for this area
-            pop_density.append(population_density(pop_count))
+            country_pop_density = population_density(pop_count)
+            # Only reproject now since densities are not cell-area specific
+            country_pop_density_reproj = xr_reproject(country_pop_density, area)
+            pop_density.append(country_pop_density_reproj)
 
     if len(pop_density) > 1:
         output = xr.concat(pop_density, dim="z").max(dim="z")

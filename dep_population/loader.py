@@ -54,8 +54,9 @@ def _open_and_crop(src, area: GeoBox):
     if not da.odc.geobox.footprint(4326).intersects(area.footprint(4326)):
         return None
 
-    return odc.geo.xr.xr_reproject(da, area, dst_nodata=float("nan")).compute()
-    # return da.odc.crop(area.footprint(da.odc.crs)).compute().odc.xr_reproject(area)
+    # Return in native src because these are still counts and reprojecting
+    # will make them wrong
+    return da.odc.crop(area.footprint(da.odc.crs)).compute()
 
 
 def _open_via_memoryfile(
