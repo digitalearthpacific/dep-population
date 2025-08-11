@@ -34,7 +34,9 @@ ITEMPATH = S3ItemPath(
 def population_grid():
     # Yes, this is convoluted, see
     pop_grid = pd.DataFrame.from_records(
-        grid(intersect_with=gadm()), columns=["index", "geobox"], index="index"
+        grid(resolution=100, intersect_with=gadm()),
+        columns=["index", "geobox"],
+        index="index",
     )
     pop_grid.index = pd.MultiIndex.from_tuples(pop_grid.index)
     pop_grid = pop_grid.geobox
@@ -67,7 +69,7 @@ def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
     else:
         output = pop_density[0]
 
-    output = output.to_dataset(name="pop_per_sqkm")
+    output = output.to_dataset(name="pop_per_sqkm").astype("float32")
 
     writer.write(output, tile_id)
 
