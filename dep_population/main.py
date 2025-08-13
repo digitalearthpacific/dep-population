@@ -50,6 +50,11 @@ def parse_tile_id(tile_str) -> tuple[int, ...]:
 
 @app.command()
 def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
+    """Create population density for the given tile id.
+
+    Args:
+        tile_id: In the format "[column,row]"
+    """
     writer = AwsDsCogWriter(ITEMPATH)
     stac_creator = StacCreator(ITEMPATH)
     stac_writer = AwsStacWriter(ITEMPATH)

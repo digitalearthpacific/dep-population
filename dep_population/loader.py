@@ -14,6 +14,16 @@ def country_codes_for_area(area: GeoBox) -> list[str]:
 
 
 def load_population_counts(country_code: str, area: GeoBox) -> xr.DataArray | None:
+    """Load population count data within the given country and area.
+
+    Args:
+        country_code: A three letter country code.
+        area: An area within the country for which we want count data.
+
+    Returns:
+        Data in the native projection, which varies by country. If there is no data
+        for the given country, returns None.
+    """
     worldpop_codes = ["ASM", "GUM", "MNP", "NCL", "PCN", "PNG", "PYF", "TKL", "TON"]
 
     direct_downloads = dict(
@@ -44,14 +54,15 @@ def load_population_counts(country_code: str, area: GeoBox) -> xr.DataArray | No
         )
 
 
-def _open_and_crop(src, area: GeoBox):
+def _open_and_crop(src, area: GeoBox) -> xr.DataArray | None:
     da = rx.open_rasterio(
         src, mask_and_scale=True, chunks=dict(x=4096, y=4096)
     ).squeeze(drop=True)
 
     # sometimes the raster doesn't have values in this area, i.e.
     # uninhabited island, etc
-    if not da.odc.geobox.footprint(4326).intersects(area.footprint(4326)):
+    # Using 3832 because 4326 can't deal with the antimeridian.
+    if not da.odc.geobox.footprint(3832).intersects(area.footprint(3832)):
         return None
 
     # Return in native src because these are still counts and reprojecting
