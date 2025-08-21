@@ -8,7 +8,7 @@ spec:
   podGC:
     strategy: OnPodSuccess
     deleteDelayDuration: 600s
-  parallelism: 25
+  parallelism: 35
   activeDeadlineSeconds: 36000 
   tolerations:
   - key: digitalearthpacific.org/node-purpose
@@ -18,7 +18,7 @@ spec:
   arguments:
     parameters:
     - name: image-tag
-      value: "c249f8c"
+      value: "2214629"
   templates:
   - name: loop-map-ocm
     retryStrategy:

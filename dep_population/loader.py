@@ -1,6 +1,4 @@
 from dep_tools.grids import gadm
-from dep_tools.loaders import Loader
-from dep_tools.searchers import Searcher
 from odc.geo.geobox import GeoBox
 import odc.geo.xr
 import requests
@@ -10,6 +8,7 @@ import xarray as xr
 
 
 def country_codes_for_area(area: GeoBox) -> list[str]:
+    """Determine the country codes for countries within an area."""
     return gadm().to_crs(area.crs).clip(area.boundingbox.bbox).GID_0.unique().tolist()
 
 
@@ -24,8 +23,10 @@ def load_population_counts(country_code: str, area: GeoBox) -> xr.DataArray | No
         Data in the native projection, which varies by country. If there is no data
         for the given country, returns None.
     """
-    worldpop_codes = ["ASM", "GUM", "MNP", "NCL", "PCN", "PNG", "PYF", "TKL", "TON"]
+    # Countries for which we fallback to worldpop data
+    worldpop_codes = ["ASM", "GUM", "MNP", "NCL", "PCN", "PNG", "PYF", "TKL"]
 
+    # Countries that have PDH or other (Fiji) data
     direct_downloads = dict(
         COK="https://pacificdata.org/data/dataset/e42508ea-22db-46d7-a00e-74fb4c4b7c8b/resource/79a4827c-efe8-40b4-ac28-2f2d0a4cafdf/download/COK_t_pop_2025.tif",
         FJI="https://dep-public-staging.s3.us-west-2.amazonaws.com/dep_population/raw/Fiji+Population+Grids+2023.zip",

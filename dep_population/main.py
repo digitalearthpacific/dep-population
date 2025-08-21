@@ -19,7 +19,7 @@ app = typer.Typer()
 
 BUCKET = "dep-public-staging"
 DATASET_ID = "population"
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 DATETIME = "2023_2025"
 
 ITEMPATH = S3ItemPath(
@@ -31,8 +31,11 @@ ITEMPATH = S3ItemPath(
 )
 
 
-def population_grid():
-    # Yes, this is convoluted, see
+def population_grid() -> pd.Series:
+    # Yes, this is convoluted. The goal is to 
+    # produce a series of geoboxes indexed by a
+    # column, row MultiIndex
+    # This should eventually be addressed in dep-tools
     pop_grid = pd.DataFrame.from_records(
         grid(resolution=100, intersect_with=gadm()),
         columns=["index", "geobox"],
@@ -53,7 +56,10 @@ def run_task(tile_id: Annotated[str, typer.Option(parser=parse_tile_id)]):
     """Create population density for the given tile id.
 
     Args:
-        tile_id: In the format "[column,row]"
+        tile_id: In the format "[column, row]"
+
+    Returns:
+        None
     """
     writer = AwsDsCogWriter(ITEMPATH)
     stac_creator = StacCreator(ITEMPATH)
